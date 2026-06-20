@@ -107,6 +107,50 @@ TLT GLD, monthly rebalance)
 
 ---
 
+## 4. Regime dependence — the same strategies on a volatile stock (TSLA), 2014–today
+
+`python compare.py --symbols TSLA --start 2014-01-01 --plot`
+
+The single most important result in this repo. TSLA buy-and-hold returned **3,902%**
+(a 40× monster) at a stomach-destroying **73.6% max drawdown**. The same 30
+strategies, unchanged, produce a *completely different* ranking than on SPY:
+
+| strategy | family | TSLA Sharpe | TSLA MaxDD | TSLA Return | …its **SPY** Sharpe |
+|----------|--------|------------:|-----------:|------------:|--------------------:|
+| `keltner_breakout` | trend | **0.98** | 34% | 2375% | 0.34 |
+| `bollinger_breakout` | trend | **0.97** | 37% | 2249% | 0.16 |
+| `macd` | trend | 0.94 | 51% | 3688% | 0.43 |
+| `cci` | trend | 0.88 | 60% | 2174% | 0.43 |
+| `adx_trend` | trend | 0.81 | 48% | 1620% | 0.46 |
+| **`buy_and_hold`** | — | 0.81 | **74%** | **3902%** | 0.64 |
+| `obv_trend` | volume | 0.69 | 69% | 1041% | 0.17 |
+| `mfi` | volume | 0.60 | 49% | 459% | 0.46 |
+| `mean_reversion` | reversion | 0.18 | 76% | -1% | 0.29 |
+| `williams_r` / `stochastic` | reversion | 0.27 | 71% | 42% | 0.42 |
+
+![TSLA strategies vs buy & hold](images/tsla_compare.png)
+
+Three findings that did NOT appear on SPY:
+
+1. **Performance is wildly regime-dependent.** The two breakout strategies that
+   ranked near the *bottom* on choppy SPY (`bollinger_breakout` 0.16,
+   `keltner_breakout` 0.34) are the *top two* on explosively-trending TSLA (0.97,
+   0.98) — same code, opposite verdict, purely because of the asset's character.
+   This is the entire reason `compare.py` exists: never assume a strategy that won
+   on one asset wins on another.
+2. **The volume strategies came alive** — `obv_trend` 0.17 → **0.69**, `mfi` 0.46
+   → **0.60**. Volume signals genuinely add more on a single stock than on a broad
+   index, as predicted.
+3. **Reversion still lost** (`mean_reversion` −0.1%, `stochastic`/`williams_r`
+   0.27) — counterintuitive for a "volatile" stock, but TSLA's volatility was
+   *trending*, not *ranging*. Fading a 40× rocket loses; reversion needs an asset
+   that chops sideways, not one that goes vertical.
+
+Net: on a trending stock the trend/breakout family captured ~60% of buy-and-hold's
+return with roughly **half the drawdown** — a ride a human could actually hold.
+Match the strategy to the asset's behavior; that's more of the skill than picking
+"the best strategy."
+
 ## The honest bottom line
 
 - **Does anything beat buy-and-hold?** On **risk-adjusted** terms, yes — several
