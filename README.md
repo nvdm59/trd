@@ -68,14 +68,53 @@ cp .env.example .env          # then paste your PAPER keys into .env
 python live_paper.py --symbols SPY AAPL --strategy ma_crossover
 ```
 
-## The four analysis tools, and why they exist
+## The five analysis tools, and why they exist
 
 | Script | Question it answers | Trap it protects you from |
 |--------|--------------------|---------------------------|
 | `backtest.py` | Did this make money on history? | — (start here, but never trust it alone) |
+| `compare.py` | Which strategy mechanism suits this asset? | Falling for one idea before seeing the field |
 | `sweep.py` | How sensitive is it to its parameters? | Cherry-picking — the best row is usually luck |
 | `walkforward.py` | Does it work on data it was *never tuned on*? | **Overfitting** — the #1 account killer |
 | `plot.py` | What does the ride actually feel like vs just holding? | Ignoring drawdown; failing to beat buy & hold |
+
+## Strategy catalog (10 single-asset strategies)
+
+Each returns a target weight from price history; the engine handles sizing and
+risk. Run `python compare.py --symbols SPY --start 2005-01-01 --plot` to race them
+all on one asset. Families: **trend** (buy strength), **momentum** (buy what's
+gone up), **reversion** (buy what's gone down).
+
+| name | family | what it does | shines when | fails when |
+|------|--------|--------------|-------------|------------|
+| `trend_momentum` | trend | long above 200-SMA *and* positive momentum, else cash | strong trends w/ deep bears to dodge | choppy, range-bound markets |
+| `ma_crossover` | trend | long when fast SMA > slow SMA | sustained trends | sideways chop (whipsaws) |
+| `donchian` | trend | long on N-bar high breakout, exit on M-bar low | big breakouts that run | false breakouts in ranges |
+| `macd` | trend | long when MACD line > signal line | smooth trending moves | choppy regimes |
+| `bollinger_breakout` | trend | long when price breaks above upper band | volatility expansions / breakouts | failed breakouts in ranges |
+| `roc` | momentum | long when trailing return > threshold (no trend filter) | persistent momentum | bear-market bounces (no filter) |
+| `vol_target_trend` | trend+ | trend, but sizes position to a target volatility | smoother ride, shallower drawdowns | calm-but-strong rallies (under-sized) |
+| `atr_trend` | trend+ | trend entry, ATR trailing-stop exit | letting winners run, cutting losers | tight stops shake you out of good trends |
+| `mean_reversion` | reversion | fades z-score extremes back to the mean | range-bound markets | strong trends (fades the move) |
+| `rsi` | reversion | buys RSI-oversold, sells RSI-overbought | choppy ranges, short bounces | sustained downtrends (catches knives) |
+
+**Measured effects on SPY, 2005–today, default params** (your numbers will vary by
+asset and date — that's the point of `compare.py`):
+
+| strategy | CAGR | Sharpe | MaxDD | vs buy & hold |
+|----------|-----:|-------:|------:|---------------|
+| `atr_trend` | 8.2% | **0.78** | 19% | better Sharpe, half the drawdown, less return |
+| `roc` | 8.6% | 0.76 | 20% | better Sharpe, half the drawdown, less return |
+| `vol_target_trend` | 7.5% | 0.74 | 19% | better Sharpe, *smallest* drawdowns |
+| `trend_momentum` | 7.1% | 0.67 | 25% | better Sharpe, less return |
+| `buy & hold` | **10.9%** | 0.64 | **55%** | most return, worst drawdown |
+| `donchian`, `bollinger_breakout`, `ma_crossover`, `macd`, `mean_reversion`, `rsi` | ≤4% | ≤0.5 | 19–34% | **lost to buy & hold on both** |
+
+The takeaway across all ten: **the trend/momentum family beats buy-and-hold on
+risk (Sharpe + drawdown) but not on raw return in a bull market**, and the
+reversion strategies just lose money on an index that mostly goes up. There is no
+free lunch here — only different trade-offs between return and survivability. Test
+any winner with `walkforward.py` before believing it.
 
 **Read results in this order:** a strategy must (1) be profitable in `backtest.py`,
 (2) hold up in `walkforward.py` (out-of-sample Sharpe is the number that predicts

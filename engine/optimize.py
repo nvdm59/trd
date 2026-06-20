@@ -33,6 +33,15 @@ PARAM_GRIDS: Dict[str, Dict[str, list]] = {
     "mean_reversion": {"lookback": [10, 20, 30], "entry_z": [1.0, 1.5, 2.0],
                        "exit_z": [0.25, 0.5]},
     "trend_momentum": {"trend_window": [100, 150, 200], "lookback": [63, 126, 252]},
+    "donchian": {"entry": [20, 55, 100], "exit": [10, 20, 55]},
+    "macd": {"fast": [8, 12], "slow": [21, 26], "signal": [9]},
+    "rsi": {"period": [7, 14], "oversold": [25, 30], "overbought": [70, 75]},
+    "bollinger_breakout": {"lookback": [20, 50], "num_std": [1.5, 2.0, 2.5]},
+    "roc": {"lookback": [63, 126, 252], "threshold": [0.0, 0.05]},
+    "vol_target_trend": {"trend_window": [100, 200], "vol_window": [20],
+                         "target_vol": [0.10, 0.15, 0.20]},
+    "atr_trend": {"sma_window": [100, 200], "atr_window": [14],
+                  "atr_mult": [2.0, 3.0, 4.0]},
 }
 
 # The strategy registry lives in strategy.py; re-exported here so the analysis
