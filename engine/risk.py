@@ -20,7 +20,12 @@ from dataclasses import dataclass
 class RiskLimits:
     max_weight_per_symbol: float = 0.20   # at most 20% of equity in any one name
     max_gross_exposure: float = 1.0       # 1.0 = no leverage; 2.0 = up to 2x
-    max_drawdown: float = 0.25            # flatten everything past a 25% drawdown
+    max_drawdown: float = 1.0             # kill switch: flatten past this drawdown.
+                                          # 1.0 = OFF (the default). It's a LIVE
+                                          # safety — once it fires it stays flat,
+                                          # which freezes a backtest forever, so
+                                          # leave it off for research and set e.g.
+                                          # 0.25 only for live/paper trading.
     commission_per_share: float = 0.0     # set to your broker's per-share fee
     commission_pct: float = 0.0           # or a percentage of notional (e.g. crypto)
     slippage_pct: float = 0.0005          # 5 bps assumed slippage on every fill

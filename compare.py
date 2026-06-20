@@ -38,6 +38,21 @@ EFFECTS = {
     "atr_trend":          "trend+ | trend with ATR trailing-stop exits",
     "mean_reversion":     "revert | fades z-score extremes, dies in trends",
     "rsi":                "revert | buys oversold bounces, dies in downtrends",
+    "triple_ma":          "trend  | strict 3-MA alignment, fewer false signals",
+    "stochastic":         "revert | buys oscillator-oversold in ranges",
+    "cci":                "trend  | rides strong CCI thrusts off the mean",
+    "keltner_breakout":   "trend  | EMA+ATR channel breakout (smoother bands)",
+    "supertrend":         "trend  | ATR trailing line, rides through pullbacks",
+    "tsmom_multi":        "moment.| multi-horizon momentum vote (robust)",
+    "bollinger_reversion":"revert | buys the lower band, dies in downtrends",
+    "volatility_breakout":"trend  | fast intrabar-style breakout (noisy on daily)",
+    "connors_rsi2":       "revert | dip-buy ONLY in an uptrend (filtered RSI-2)",
+    "adx_trend":          "trend  | only trades when ADX says trend is strong",
+    # cross-asset rotation (only run when >1 symbol)
+    "dual_momentum":      "ROTATE | holds the single strongest asset, else bonds",
+    "relative_momentum":  "ROTATE | holds top-N strongest assets, equal weight",
+    "ew_trend":           "ROTATE | holds all assets above their trend, else cash",
+    "inverse_vol":        "ROTATE | always invested, weighted by 1/volatility",
 }
 
 
@@ -68,6 +83,17 @@ def main() -> None:
             continue
         rows.append((name, run.metrics))
         equities[name] = run.equity
+
+    # cross-asset ROTATION strategies only make sense with a real universe
+    if len(args.symbols) > 1:
+        from engine.multi_asset import ROTATION_REGISTRY, run_rotation
+        rot_limits = RiskLimits(max_weight_per_symbol=1.0)  # may go 100% in one name
+        safe = "TLT" if "TLT" in args.symbols else None
+        for name in ROTATION_REGISTRY:
+            metrics, equity = run_rotation(name, args.symbols, history, args.cash,
+                                           rot_limits, safe_asset=safe)
+            rows.append((name, metrics))
+            equities[name] = equity
 
     bench = buy_and_hold(history, args.cash)
     from engine.metrics import compute

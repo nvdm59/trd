@@ -62,59 +62,52 @@ python sweep.py --symbols SPY AAPL --strategy ma_crossover
 # 4) Picture is worth a thousand numbers — equity + drawdown vs buy & hold
 python plot.py --symbols SPY AAPL --strategy ma_crossover   # -> results/equity.png
 
-# 5) Paper trade with fake money on a real broker
+# 5) Cross-asset ROTATION (dual momentum: hold the strongest asset, flee to bonds)
+python rotate.py --strategy dual_momentum --safe TLT        # -> beats buy & hold
+
+# 6) Paper trade with fake money on a real broker
 #    - make a free Alpaca account, switch to Paper, generate keys
 cp .env.example .env          # then paste your PAPER keys into .env
 python live_paper.py --symbols SPY AAPL --strategy ma_crossover
 ```
 
-## The five analysis tools, and why they exist
+## The six analysis tools, and why they exist
 
 | Script | Question it answers | Trap it protects you from |
 |--------|--------------------|---------------------------|
 | `backtest.py` | Did this make money on history? | — (start here, but never trust it alone) |
-| `compare.py` | Which strategy mechanism suits this asset? | Falling for one idea before seeing the field |
+| `compare.py` | Which of the 24 strategies suits this asset/universe? | Falling for one idea before seeing the field |
+| `rotate.py` | Can cross-asset rotation beat buy & hold? | Believing single-asset timing is the only option |
 | `sweep.py` | How sensitive is it to its parameters? | Cherry-picking — the best row is usually luck |
 | `walkforward.py` | Does it work on data it was *never tuned on*? | **Overfitting** — the #1 account killer |
 | `plot.py` | What does the ride actually feel like vs just holding? | Ignoring drawdown; failing to beat buy & hold |
 
-## Strategy catalog (10 single-asset strategies)
+## Strategies and results — see `docs/`
 
-Each returns a target weight from price history; the engine handles sizing and
-risk. Run `python compare.py --symbols SPY --start 2005-01-01 --plot` to race them
-all on one asset. Families: **trend** (buy strength), **momentum** (buy what's
-gone up), **reversion** (buy what's gone down).
+There are **24 strategies**: 20 single-asset (trend / momentum / reversion) and 4
+cross-asset rotation (dual momentum, relative momentum, equal-weight trend,
+inverse-vol). Full catalog with what each does, when it shines and when it fails:
+**[docs/STRATEGIES.md](docs/STRATEGIES.md)**. Measured, reproducible results with
+realistic costs: **[docs/REPORT.md](docs/REPORT.md)**.
 
-| name | family | what it does | shines when | fails when |
-|------|--------|--------------|-------------|------------|
-| `trend_momentum` | trend | long above 200-SMA *and* positive momentum, else cash | strong trends w/ deep bears to dodge | choppy, range-bound markets |
-| `ma_crossover` | trend | long when fast SMA > slow SMA | sustained trends | sideways chop (whipsaws) |
-| `donchian` | trend | long on N-bar high breakout, exit on M-bar low | big breakouts that run | false breakouts in ranges |
-| `macd` | trend | long when MACD line > signal line | smooth trending moves | choppy regimes |
-| `bollinger_breakout` | trend | long when price breaks above upper band | volatility expansions / breakouts | failed breakouts in ranges |
-| `roc` | momentum | long when trailing return > threshold (no trend filter) | persistent momentum | bear-market bounces (no filter) |
-| `vol_target_trend` | trend+ | trend, but sizes position to a target volatility | smoother ride, shallower drawdowns | calm-but-strong rallies (under-sized) |
-| `atr_trend` | trend+ | trend entry, ATR trailing-stop exit | letting winners run, cutting losers | tight stops shake you out of good trends |
-| `mean_reversion` | reversion | fades z-score extremes back to the mean | range-bound markets | strong trends (fades the move) |
-| `rsi` | reversion | buys RSI-oversold, sells RSI-overbought | choppy ranges, short bounces | sustained downtrends (catches knives) |
+Race them all yourself:
 
-**Measured effects on SPY, 2005–today, default params** (your numbers will vary by
-asset and date — that's the point of `compare.py`):
+```bash
+python compare.py --symbols SPY --start 2008-01-01 --plot                 # single-asset shootout
+python compare.py --symbols SPY QQQ EFA EEM TLT GLD --start 2007-01-01    # + rotation, on a universe
+```
 
-| strategy | CAGR | Sharpe | MaxDD | vs buy & hold |
-|----------|-----:|-------:|------:|---------------|
-| `atr_trend` | 8.2% | **0.78** | 19% | better Sharpe, half the drawdown, less return |
-| `roc` | 8.6% | 0.76 | 20% | better Sharpe, half the drawdown, less return |
-| `vol_target_trend` | 7.5% | 0.74 | 19% | better Sharpe, *smallest* drawdowns |
-| `trend_momentum` | 7.1% | 0.67 | 25% | better Sharpe, less return |
-| `buy & hold` | **10.9%** | 0.64 | **55%** | most return, worst drawdown |
-| `donchian`, `bollinger_breakout`, `ma_crossover`, `macd`, `mean_reversion`, `rsi` | ≤4% | ≤0.5 | 19–34% | **lost to buy & hold on both** |
+**The headline finding** (in-sample, default params — a hypothesis, not a
+forecast): on **risk-adjusted** terms several trend/momentum strategies and
+`inverse_vol` beat buy-and-hold (better Sharpe, roughly half the drawdown); on
+**raw return**, only `dual_momentum` rotation beats it — because when stocks fall
+it rotates into bonds/gold instead of sitting in cash. There is no free lunch:
+every strategy that lowered drawdown also lowered return.
 
-The takeaway across all ten: **the trend/momentum family beats buy-and-hold on
-risk (Sharpe + drawdown) but not on raw return in a bull market**, and the
-reversion strategies just lose money on an index that mostly goes up. There is no
-free lunch here — only different trade-offs between return and survivability. Test
-any winner with `walkforward.py` before believing it.
+> Risk note: the drawdown **kill switch is OFF by default** (`max_drawdown=1.0`).
+> It permanently flattens the book once tripped — a sensible *live* safety, but it
+> freezes a backtest forever, so it's off for research. Set it (e.g. `0.25`) only
+> for live/paper trading. The per-symbol weight cap and no-trade band are always on.
 
 **Read results in this order:** a strategy must (1) be profitable in `backtest.py`,
 (2) hold up in `walkforward.py` (out-of-sample Sharpe is the number that predicts

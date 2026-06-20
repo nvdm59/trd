@@ -42,6 +42,16 @@ PARAM_GRIDS: Dict[str, Dict[str, list]] = {
                          "target_vol": [0.10, 0.15, 0.20]},
     "atr_trend": {"sma_window": [100, 200], "atr_window": [14],
                   "atr_mult": [2.0, 3.0, 4.0]},
+    "triple_ma": {"fast": [10, 20], "mid": [50], "slow": [100, 200]},
+    "stochastic": {"period": [14], "oversold": [15, 20], "overbought": [80, 85]},
+    "cci": {"period": [14, 20], "entry": [100, 150]},
+    "keltner_breakout": {"ema": [20], "atr_window": [10], "mult": [1.5, 2.0, 2.5]},
+    "supertrend": {"atr_window": [7, 10], "mult": [2.0, 3.0]},
+    "tsmom_multi": {},  # tuple lookbacks aren't grid-friendly; default only
+    "bollinger_reversion": {"lookback": [20], "num_std": [1.5, 2.0, 2.5]},
+    "volatility_breakout": {"k": [0.3, 0.5, 0.8]},
+    "connors_rsi2": {"oversold": [5, 10], "exit_level": [50, 70]},
+    "adx_trend": {"period": [14], "adx_min": [20, 25]},
 }
 
 # The strategy registry lives in strategy.py; re-exported here so the analysis
