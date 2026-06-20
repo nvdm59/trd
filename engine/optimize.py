@@ -24,7 +24,7 @@ import pandas as pd
 from .engine import BacktestEngine
 from .metrics import Metrics, compute
 from .risk import RiskLimits
-from .strategy import MeanReversion, MovingAverageCrossover, Strategy
+from .strategy import REGISTRY, Strategy
 
 # Parameter grids to search per strategy. Keep these SMALL — every extra combo
 # is another lottery ticket for overfitting.
@@ -32,12 +32,12 @@ PARAM_GRIDS: Dict[str, Dict[str, list]] = {
     "ma_crossover": {"fast": [10, 20, 30, 50], "slow": [50, 100, 150, 200]},
     "mean_reversion": {"lookback": [10, 20, 30], "entry_z": [1.0, 1.5, 2.0],
                        "exit_z": [0.25, 0.5]},
+    "trend_momentum": {"trend_window": [100, 150, 200], "lookback": [63, 126, 252]},
 }
 
-STRATEGY_CLASSES: Dict[str, Type[Strategy]] = {
-    "ma_crossover": MovingAverageCrossover,
-    "mean_reversion": MeanReversion,
-}
+# The strategy registry lives in strategy.py; re-exported here so the analysis
+# tools have a single import for both the classes and their grids.
+STRATEGY_CLASSES: Dict[str, Type[Strategy]] = REGISTRY
 
 
 def expand_grid(grid: Dict[str, list]) -> List[dict]:

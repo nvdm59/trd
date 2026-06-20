@@ -19,12 +19,7 @@ import argparse
 from engine.data import load_history
 from engine.engine import BacktestEngine
 from engine.risk import RiskLimits
-from engine.strategy import MeanReversion, MovingAverageCrossover
-
-STRATEGIES = {
-    "ma_crossover": MovingAverageCrossover,
-    "mean_reversion": MeanReversion,
-}
+from engine.strategy import REGISTRY as STRATEGIES
 
 
 def main() -> None:

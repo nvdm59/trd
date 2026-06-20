@@ -85,3 +85,47 @@ class MeanReversion(Strategy):
             self._pos = 0.0
         # else: hold the current stance
         return self._clamp(self._pos)
+
+
+class TimeSeriesMomentum(Strategy):
+    """
+    Absolute (time-series) momentum with a long-term trend filter — built to beat
+    buy-and-hold by capturing the upside while sidestepping deep bear markets.
+
+    Unlike the MA crossover (which the per-symbol cap leaves mostly in cash), this
+    goes FULLY long (weight 1.0) during healthy uptrends, so it can actually keep
+    pace with — and then pull ahead of — buy-and-hold by avoiding the big crashes:
+
+      Long (1.0) only when BOTH hold:
+        * price is above its long-term moving average (trend_window), AND
+        * the trailing return over `lookback` bars is positive (momentum).
+      Otherwise flat (cash). It never shorts — in a downtrend it simply waits.
+
+    To let it be fully invested you must raise the risk cap: run tools with
+    --max-weight 1.0 for a single symbol (or 1/N per symbol for N symbols).
+    """
+    name = "trend_momentum"
+
+    def __init__(self, trend_window: int = 200, lookback: int = 126):
+        self.trend_window = trend_window
+        self.lookback = lookback
+        self.warmup = max(trend_window, lookback) + 1
+        self.long_only = True
+
+    def target_weight(self, history: pd.DataFrame) -> float:
+        close = history["close"]
+        sma = close.tail(self.trend_window).mean()
+        price = close.iloc[-1]
+        past = close.iloc[-(self.lookback + 1)]
+        momentum = price / past - 1.0
+        return self._clamp(1.0 if (price > sma and momentum > 0) else 0.0)
+
+
+# Single source of truth for strategy names -> classes. Every CLI tool reads
+# this, so adding a strategy here wires it into backtest, sweep, walk-forward,
+# plot, and live trading at once.
+REGISTRY = {
+    "ma_crossover": MovingAverageCrossover,
+    "mean_reversion": MeanReversion,
+    "trend_momentum": TimeSeriesMomentum,
+}

@@ -30,8 +30,9 @@ risk a cent.
 
 - **data** (`engine/data.py`) — OHLCV bars, one at a time, in time order.
 - **strategy** (`engine/strategy.py`) — looks at history up to *now* and returns a
-  target weight in [-1, 1]. Ships with a trend strategy (MA crossover) and a
-  mean-reversion strategy (z-score).
+  target weight in [-1, 1]. Ships with three: `ma_crossover` (trend), `mean_reversion`
+  (z-score), and `trend_momentum` (absolute momentum + 200-day trend filter,
+  designed to dodge bear markets — see below).
 - **risk** (`engine/risk.py`) — turns a weight into a share count under caps:
   per-symbol size, gross exposure, and a max-drawdown kill switch.
 - **broker** (`engine/broker.py`) — `SimBroker` for backtests/paper sim,
@@ -87,6 +88,34 @@ with fake money, is the whole game.
 > 40% invested (the rest sits in cash), which caps both returns and drawdown.
 > Raise `--max-weight` or add symbols to put more capital to work — at the cost of
 > bigger swings.
+
+## Can anything beat buy-and-hold? (`trend_momentum`)
+
+Short answer: **not on raw return, in a bull market — and that's reality, not a
+bug.** The `trend_momentum` strategy goes fully long only when price is above its
+200-day average *and* trailing momentum is positive, otherwise it sits in cash.
+It's the classic "ride the trend, dodge the crash" approach. Run it fully
+invested on SPY:
+
+```bash
+python plot.py --symbols SPY --strategy trend_momentum --start 2005-01-01 --max-weight 1.0
+python walkforward.py --symbols SPY --strategy trend_momentum --start 2005-01-01 --max-weight 1.0
+```
+
+Result over SPY since 2005 (and it survives out-of-sample):
+
+| metric | trend_momentum | buy & hold |
+|--------|---------------:|-----------:|
+| CAGR | 7.1% | 10.9% |
+| Sharpe | **0.67** | 0.64 |
+| Max drawdown | **24%** | 55% |
+
+It wins on **risk** (higher Sharpe, *half* the drawdown — it stepped aside in
+2008) but loses on **raw return**, because in a long bull market it occasionally
+whipsaws out and misses sharp recoveries. This is the honest takeaway of the
+whole repo: a strategy's job isn't always more money — often it's *the same money
+with a ride you can actually survive*. If you can't beat buy-and-hold on return,
+the question becomes whether you can beat it on drawdown enough to matter to you.
 
 Run `live_paper.py` on a schedule (cron / Task Scheduler) at your strategy's
 cadence — e.g. once daily after the close for a daily strategy.

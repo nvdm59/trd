@@ -25,12 +25,7 @@ import os
 from engine.broker import AlpacaBroker
 from engine.data import load_history
 from engine.risk import RiskLimits, RiskManager
-from engine.strategy import MeanReversion, MovingAverageCrossover
-
-STRATEGIES = {
-    "ma_crossover": MovingAverageCrossover,
-    "mean_reversion": MeanReversion,
-}
+from engine.strategy import REGISTRY as STRATEGIES
 
 
 def main() -> None:
