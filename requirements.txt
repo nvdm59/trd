@@ -1,0 +1,8 @@
+# Core (required) — data, math, engine
+pandas>=1.3
+numpy>=1.21
+yfinance>=0.2.40        # free historical market data
+
+# Live / paper trading (optional — only needed for live_paper.py)
+alpaca-py>=0.20         # Alpaca broker API (paper + live)
+python-dotenv>=1.0      # loads API keys from a .env file

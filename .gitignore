@@ -1,0 +1,22 @@
+# Secrets — NEVER commit real API keys
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+*.egg-info/
+.pytest_cache/
+
+# Data / output caches
+*.csv
+*.pkl
+data/
+results/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
