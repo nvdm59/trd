@@ -52,11 +52,41 @@ pip install -r requirements.txt
 python backtest.py --symbols SPY AAPL --strategy ma_crossover --start 2018-01-01
 python backtest.py --symbols SPY AAPL --strategy mean_reversion --start 2018-01-01
 
-# 2) Paper trade with fake money on a real broker
+# 2) Validate it out-of-sample — the step that stops you fooling yourself
+python walkforward.py --symbols SPY AAPL --strategy ma_crossover
+
+# 3) (optional) See how sensitive it is to parameters
+python sweep.py --symbols SPY AAPL --strategy ma_crossover
+
+# 4) Picture is worth a thousand numbers — equity + drawdown vs buy & hold
+python plot.py --symbols SPY AAPL --strategy ma_crossover   # -> results/equity.png
+
+# 5) Paper trade with fake money on a real broker
 #    - make a free Alpaca account, switch to Paper, generate keys
 cp .env.example .env          # then paste your PAPER keys into .env
 python live_paper.py --symbols SPY AAPL --strategy ma_crossover
 ```
+
+## The four analysis tools, and why they exist
+
+| Script | Question it answers | Trap it protects you from |
+|--------|--------------------|---------------------------|
+| `backtest.py` | Did this make money on history? | — (start here, but never trust it alone) |
+| `sweep.py` | How sensitive is it to its parameters? | Cherry-picking — the best row is usually luck |
+| `walkforward.py` | Does it work on data it was *never tuned on*? | **Overfitting** — the #1 account killer |
+| `plot.py` | What does the ride actually feel like vs just holding? | Ignoring drawdown; failing to beat buy & hold |
+
+**Read results in this order:** a strategy must (1) be profitable in `backtest.py`,
+(2) hold up in `walkforward.py` (out-of-sample Sharpe is the number that predicts
+live results — it's almost always worse than the in-sample backtest, and that gap
+is the overfitting), and (3) actually beat buy-and-hold in `plot.py`. Most
+strategies fail at least one of these. That's the point — finding out *here*,
+with fake money, is the whole game.
+
+> Note on cash drag: with `--max-weight 0.20` and 2 symbols, the engine is at most
+> 40% invested (the rest sits in cash), which caps both returns and drawdown.
+> Raise `--max-weight` or add symbols to put more capital to work — at the cost of
+> bigger swings.
 
 Run `live_paper.py` on a schedule (cron / Task Scheduler) at your strategy's
 cadence — e.g. once daily after the close for a daily strategy.
