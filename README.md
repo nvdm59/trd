@@ -76,7 +76,7 @@ python live_paper.py --symbols SPY AAPL --strategy ma_crossover
 | Script | Question it answers | Trap it protects you from |
 |--------|--------------------|---------------------------|
 | `backtest.py` | Did this make money on history? | — (start here, but never trust it alone) |
-| `compare.py` | Which of the 24 strategies suits this asset/universe? | Falling for one idea before seeing the field |
+| `compare.py` | Which of the 34 strategies suits this asset/universe? | Falling for one idea before seeing the field |
 | `rotate.py` | Can cross-asset rotation beat buy & hold? | Believing single-asset timing is the only option |
 | `sweep.py` | How sensitive is it to its parameters? | Cherry-picking — the best row is usually luck |
 | `walkforward.py` | Does it work on data it was *never tuned on*? | **Overfitting** — the #1 account killer |
@@ -84,9 +84,10 @@ python live_paper.py --symbols SPY AAPL --strategy ma_crossover
 
 ## Strategies and results — see `docs/`
 
-There are **24 strategies**: 20 single-asset (trend / momentum / reversion) and 4
-cross-asset rotation (dual momentum, relative momentum, equal-weight trend,
-inverse-vol). Full catalog with what each does, when it shines and when it fails:
+There are **34 strategies**: 30 single-asset (trend / momentum / reversion /
+volume) and 4 cross-asset rotation (dual momentum, relative momentum,
+equal-weight trend, inverse-vol). Full catalog with what each does, when it shines
+and when it fails:
 **[docs/STRATEGIES.md](docs/STRATEGIES.md)**. Measured, reproducible results with
 realistic costs: **[docs/REPORT.md](docs/REPORT.md)**.
 

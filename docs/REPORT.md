@@ -12,7 +12,7 @@ results are a hypothesis, not a forecast; validate any winner with `walkforward.
 
 ---
 
-## 1. Single-asset strategies on SPY, 2008–today
+## 1. Single-asset strategies on SPY, 2008–today (all 30)
 
 `python compare.py --symbols SPY --start 2008-01-01 --plot`
 
@@ -22,34 +22,48 @@ results are a hypothesis, not a forecast; validate any winner with `walkforward.
 | `vol_target_trend` | 8.5% | 0.82 | 17.4% | 352% | trend+ |
 | `supertrend` | 8.1% | 0.82 | 14.1% | 322% | trend |
 | `roc` | 8.8% | 0.77 | 19.8% | 375% | momentum |
+| `aroon` | 7.9% | 0.74 | 15.8% | 306% | trend |
 | `trend_momentum` | 7.3% | 0.68 | 24.5% | 268% | trend |
 | **`buy_and_hold`** | **11.3%** | 0.64 | **51.9%** | **623%** | benchmark |
+| `trix` | 6.9% | 0.63 | 21.5% | 245% | momentum |
 | `ma_crossover` | 6.8% | 0.60 | 28.1% | 236% | trend |
 | `tsmom_multi` | 6.1% | 0.60 | 21.1% | 199% | momentum |
+| `vwma_trend` | 6.2% | 0.56 | 29.2% | 204% | volume |
 | `donchian` | 4.8% | 0.56 | 19.8% | 137% | trend |
 | `triple_ma` | 4.9% | 0.55 | 15.9% | 143% | trend |
+| `dmi_cross` | 5.2% | 0.54 | 17.1% | 153% | trend |
+| `mfi` | 6.6% | 0.46 | 47.8% | 225% | volume |
 | `adx_trend` | 3.9% | 0.46 | 17.6% | 102% | trend |
+| `cci` | 3.8% | 0.43 | 27.9% | 98% | trend |
 | `macd` | 4.3% | 0.43 | 23.3% | 119% | trend |
 | `rsi` | 5.6% | 0.42 | 47.4% | 175% | reversion |
 | `stochastic` | 5.5% | 0.42 | 39.4% | 170% | reversion |
-| `cci` | 3.8% | 0.43 | 27.9% | 98% | trend |
+| `williams_r` | 5.5% | 0.42 | 39.4% | 170% | reversion |
 | `bollinger_reversion` | 3.8% | 0.34 | 35.6% | 100% | reversion |
 | `keltner_breakout` | 2.2% | 0.34 | 15.1% | 48% | trend |
 | `mean_reversion` | 3.3% | 0.29 | 37.1% | 81% | reversion |
+| `roc_accel` | 1.7% | 0.25 | 21.8% | 37% | momentum |
 | `connors_rsi2` | 1.2% | 0.21 | 25.6% | 25% | reversion |
+| `psar` | 1.7% | 0.20 | 45.8% | 37% | trend |
+| `kama_trend` | 1.6% | 0.20 | 38.1% | 35% | trend |
+| `obv_trend` | 1.3% | 0.17 | 40.5% | 26% | volume |
 | `bollinger_breakout` | 0.8% | 0.16 | 22.4% | 16% | trend |
-| `volatility_breakout` | -5.6% | -0.64 | 67.8% | -66% | trend (broken on daily) |
+| `volatility_breakout` | -5.6% | -0.64 | 68.0% | -66% | trend (broken on daily) |
 
 **Beat buy & hold on Sharpe:** `atr_trend`, `vol_target_trend`, `supertrend`,
-`roc`, `trend_momentum`. **Beat it on raw return:** none.
+`roc`, `aroon`, `trend_momentum`. **Beat it on raw return:** none.
 
 Reading it: the **trend/momentum family wins on risk** — the best (`atr_trend`)
 roughly *triples* buy-and-hold's risk efficiency on drawdown (17% vs 52%) at a
 similar Sharpe — but **none beat buy-and-hold on raw return**, because SPY mostly
 went up and any strategy that sometimes sits in cash gives up upside. The
-reversion strategies mostly lose on an index that trends up; `volatility_breakout`
-is an intraday idea that is simply wrong on daily bars (note the trade count and
-−66% return — a cautionary example, left in on purpose).
+reversion strategies mostly lose on an index that trends up. Two notes on the new
+additions: the **volume** strategies (`obv_trend`, `vwma_trend`, `mfi`) are
+middling-to-poor on a broad index — volume signals tend to add more on individual
+stocks than on SPY — and `williams_r` ties `stochastic` exactly because at these
+thresholds they are the same oscillator shifted by a constant.
+`volatility_breakout` is an intraday idea that is simply wrong on daily bars (note
+the trade count and −66% return — a cautionary example, left in on purpose).
 
 ---
 

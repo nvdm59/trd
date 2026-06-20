@@ -52,6 +52,16 @@ PARAM_GRIDS: Dict[str, Dict[str, list]] = {
     "volatility_breakout": {"k": [0.3, 0.5, 0.8]},
     "connors_rsi2": {"oversold": [5, 10], "exit_level": [50, 70]},
     "adx_trend": {"period": [14], "adx_min": [20, 25]},
+    "psar": {"af_step": [0.01, 0.02], "af_max": [0.2]},
+    "aroon": {"period": [14, 25]},
+    "dmi_cross": {"period": [10, 14]},
+    "trix": {"period": [9, 15]},
+    "kama_trend": {"er_period": [10], "fast": [2], "slow": [30]},
+    "williams_r": {"period": [14], "oversold": [-80, -85], "overbought": [-20]},
+    "obv_trend": {"ma_window": [20, 50]},
+    "vwma_trend": {"fast": [10, 20], "slow": [50]},
+    "mfi": {"period": [14], "oversold": [20], "overbought": [80]},
+    "roc_accel": {"lookback": [63, 126], "accel_lag": [21]},
 }
 
 # The strategy registry lives in strategy.py; re-exported here so the analysis

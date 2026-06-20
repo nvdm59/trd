@@ -1,6 +1,6 @@
 # Strategy catalog
 
-24 strategies: **20 single-asset** (decide each symbol on its own) and **4
+34 strategies: **30 single-asset** (decide each symbol on its own) and **4
 cross-asset rotation** (rank symbols against each other and rotate capital).
 
 - Single-asset live in `engine/strategy.py`, registered in `REGISTRY`. Run with
@@ -10,10 +10,11 @@ cross-asset rotation** (rank symbols against each other and rotate capital).
   you pass more than one symbol).
 
 Families: **trend** (buy strength, sell weakness), **momentum** (buy what has
-risen most), **reversion** (buy what has fallen, bet on a bounce), **rotation**
-(cross-asset allocation). Measured results are in [REPORT.md](REPORT.md).
+risen most), **reversion** (buy what has fallen, bet on a bounce), **volume**
+(use the volume column to confirm), **rotation** (cross-asset allocation).
+Measured results are in [REPORT.md](REPORT.md).
 
-## Single-asset (20)
+## Single-asset (30)
 
 | name | family | what it does | shines when | fails when |
 |------|--------|--------------|-------------|------------|
@@ -37,6 +38,16 @@ risen most), **reversion** (buy what has fallen, bet on a bounce), **rotation**
 | `stochastic` | reversion | buys stochastic-oversold within the range | ranges | downtrends |
 | `bollinger_reversion` | reversion | buys the lower band, exits at the middle | mean-reverting assets | trending assets |
 | `connors_rsi2` | reversion | dip-buy (RSI-2) **only** when above the 200-SMA | pullbacks inside an uptrend | choppy bear markets |
+| `psar` | trend | Parabolic SAR stop-and-reverse trailing dot | clean trends (rides then exits) | chop (flips constantly) |
+| `aroon` | trend | long when a new high came more recently than a new low | catching trend changes early | flat markets |
+| `dmi_cross` | trend | long when +DI > −DI (directional cross, no strength gate) | trends of any strength | weak/choppy trends |
+| `trix` | momentum | long when triple-smoothed EMA momentum is positive | persistent trends, low noise | sharp turns (it's late) |
+| `kama_trend` | trend | long above an *adaptive* MA that speeds up/slows to noise | noisy markets vs fixed MAs | strong clean trends (lags) |
+| `williams_r` | reversion | buy %R-oversold, exit overbought (≈ stochastic) | ranges | downtrends |
+| `obv_trend` | volume | long when On-Balance Volume is above its average | volume-confirmed trends | divergent/low-volume moves |
+| `vwma_trend` | volume | volume-weighted MA crossover | trends led by high-volume bars | thin, gappy markets |
+| `mfi` | volume | money-flow (volume-weighted RSI) reversion | volume-backed reversals | strong trends |
+| `roc_accel` | momentum | long only when momentum is positive *and accelerating* | early-trend strengthening | choppy (many false alarms) |
 
 ## Cross-asset rotation (4)
 

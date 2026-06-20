@@ -607,6 +607,266 @@ class ADXTrend(Strategy):
         return self._clamp(1.0 if (strong and bull) else 0.0)
 
 
+# ───────────────────────── third wave: 10 more ───────────────────────────────
+
+class ParabolicSAR(Strategy):
+    """Trend (stop-and-reverse). The Parabolic SAR is a dot that trails price and
+    accelerates as a trend extends; when price crosses it, the trend is presumed
+    over. Long while price is above the SAR. Excellent at riding and then exiting
+    clean trends; in choppy markets it flips constantly."""
+    name = "psar"
+
+    def __init__(self, af_step: float = 0.02, af_max: float = 0.2, long_only: bool = True):
+        self.af_step, self.af_max = af_step, af_max
+        self.warmup = 5
+        self.long_only = long_only
+        self._pos = 0.0
+
+    def target_weight(self, history: pd.DataFrame) -> float:
+        seg = history.tail(250)
+        h = seg["high"].to_numpy(); l = seg["low"].to_numpy()
+        n = len(h)
+        if n < 3:
+            return self._clamp(self._pos)
+        up = True
+        sar, ep, af = l[0], h[0], self.af_step
+        for i in range(1, n):
+            sar = sar + af * (ep - sar)
+            if up:
+                sar = min(sar, l[i - 1], l[max(i - 2, 0)])
+                if h[i] > ep:
+                    ep, af = h[i], min(af + self.af_step, self.af_max)
+                if l[i] < sar:
+                    up, sar, ep, af = False, ep, l[i], self.af_step
+            else:
+                sar = max(sar, h[i - 1], h[max(i - 2, 0)])
+                if l[i] < ep:
+                    ep, af = l[i], min(af + self.af_step, self.af_max)
+                if h[i] > sar:
+                    up, sar, ep, af = True, ep, h[i], self.af_step
+        self._pos = 1.0 if up else 0.0
+        return self._clamp(self._pos)
+
+
+class Aroon(Strategy):
+    """Trend timing. Aroon-Up/Down track how recently the highest high / lowest
+    low occurred within a window. Long when Aroon-Up > Aroon-Down (a new high came
+    more recently than a new low), i.e. an uptrend is in control. Good at catching
+    trend *changes* early; noisy in flat markets."""
+    name = "aroon"
+
+    def __init__(self, period: int = 25, long_only: bool = True):
+        self.period = period
+        self.warmup = period + 1
+        self.long_only = long_only
+
+    def target_weight(self, history: pd.DataFrame) -> float:
+        hh = history["high"].tail(self.period + 1).to_numpy()
+        ll = history["low"].tail(self.period + 1).to_numpy()
+        # most-recent extreme: larger argmax/argmin index = more recent
+        return self._clamp(1.0 if int(hh.argmax()) > int(ll.argmin()) else 0.0)
+
+
+class DMICross(Strategy):
+    """Trend. The Directional Movement +DI/−DI lines measure the strength of up
+    vs down moves. Long when +DI is above −DI (buyers dominating). Same machinery
+    as `adx_trend` but WITHOUT the ADX strength gate, so it trades more often and
+    in weaker trends — included to show what that gate is worth."""
+    name = "dmi_cross"
+
+    def __init__(self, period: int = 14, long_only: bool = True):
+        self.period = period
+        self.warmup = 2 * period + 1
+        self.long_only = long_only
+
+    def target_weight(self, history: pd.DataFrame) -> float:
+        seg = history.tail(3 * self.period + 5)
+        h, l, c = seg["high"], seg["low"], seg["close"]
+        up, down = h.diff(), -l.diff()
+        plus_dm = ((up > down) & (up > 0)) * up
+        minus_dm = ((down > up) & (down > 0)) * down
+        prev = c.shift(1)
+        tr = pd.concat([h - l, (h - prev).abs(), (l - prev).abs()], axis=1).max(axis=1)
+        atr = tr.rolling(self.period).mean()
+        plus_di = 100.0 * plus_dm.rolling(self.period).mean() / atr
+        minus_di = 100.0 * minus_dm.rolling(self.period).mean() / atr
+        if pd.isna(plus_di.iloc[-1]) or pd.isna(minus_di.iloc[-1]):
+            return self._clamp(0.0)
+        return self._clamp(1.0 if plus_di.iloc[-1] > minus_di.iloc[-1] else 0.0)
+
+
+class TRIX(Strategy):
+    """Momentum oscillator. TRIX is the rate of change of a triple-smoothed EMA —
+    the triple smoothing strips out short-term noise, so it whipsaws far less than
+    raw momentum. Long when TRIX is positive (smoothed momentum rising). Smooth and
+    late; best on persistent trends."""
+    name = "trix"
+
+    def __init__(self, period: int = 15, long_only: bool = True):
+        self.period = period
+        self.warmup = 4 * period
+        self.long_only = long_only
+
+    def target_weight(self, history: pd.DataFrame) -> float:
+        seg = history["close"].tail(self.period * 6 + 5)
+        e1 = seg.ewm(span=self.period, adjust=False).mean()
+        e2 = e1.ewm(span=self.period, adjust=False).mean()
+        e3 = e2.ewm(span=self.period, adjust=False).mean()
+        trix = e3.pct_change().iloc[-1]
+        return self._clamp(1.0 if trix > 0 else 0.0)
+
+
+class KAMATrend(Strategy):
+    """Trend (adaptive). Kaufman's Adaptive Moving Average speeds up in clean
+    trends and slows down in noise, using an 'efficiency ratio' of directional
+    travel vs total travel. Long when price is above its KAMA. The adaptivity is
+    meant to cut the whipsaws that kill fixed-length MAs in choppy markets."""
+    name = "kama_trend"
+
+    def __init__(self, er_period: int = 10, fast: int = 2, slow: int = 30,
+                 long_only: bool = True):
+        self.er_period, self.fast, self.slow = er_period, fast, slow
+        self.warmup = er_period + 50
+        self.long_only = long_only
+
+    def target_weight(self, history: pd.DataFrame) -> float:
+        c = history["close"].tail(self.er_period + 60).to_numpy()
+        n = len(c)
+        if n < self.er_period + 2:
+            return self._clamp(0.0)
+        fast_sc, slow_sc = 2.0 / (self.fast + 1), 2.0 / (self.slow + 1)
+        kama = c[0]
+        for i in range(1, n):
+            if i >= self.er_period:
+                change = abs(c[i] - c[i - self.er_period])
+                vol = np.abs(np.diff(c[i - self.er_period:i + 1])).sum()
+                er = change / vol if vol != 0 else 0.0
+            else:
+                er = 0.0
+            sc = (er * (fast_sc - slow_sc) + slow_sc) ** 2
+            kama = kama + sc * (c[i] - kama)
+        return self._clamp(1.0 if c[-1] > kama else 0.0)
+
+
+class WilliamsR(Strategy):
+    """Reversion. Williams %R is where price sits in its recent high-low range,
+    scaled −100 (at the lows) to 0 (at the highs). Buy when deeply oversold
+    (below oversold), exit when it recovers above overbought. A close cousin of
+    the stochastic oscillator; counter-trend, so it suffers in downtrends."""
+    name = "williams_r"
+
+    def __init__(self, period: int = 14, oversold: float = -80.0,
+                 overbought: float = -20.0, long_only: bool = True):
+        self.period, self.oversold, self.overbought = period, oversold, overbought
+        self.warmup = period + 1
+        self.long_only = long_only
+        self._pos = 0.0
+
+    def target_weight(self, history: pd.DataFrame) -> float:
+        hh = history["high"].tail(self.period).max()
+        ll = history["low"].tail(self.period).min()
+        close = history["close"].iloc[-1]
+        wr = -50.0 if hh == ll else -100.0 * (hh - close) / (hh - ll)
+        if wr <= self.oversold:
+            self._pos = 1.0
+        elif wr >= self.overbought:
+            self._pos = 0.0
+        return self._clamp(self._pos)
+
+
+class OBVTrend(Strategy):
+    """Trend, VOLUME-based. On-Balance Volume adds the day's volume on up days and
+    subtracts it on down days, so a rising OBV means volume is flowing in. Long
+    when OBV is above its own moving average — using *participation*, not price, to
+    confirm a trend. The first volume-driven strategy in the set."""
+    name = "obv_trend"
+
+    def __init__(self, ma_window: int = 20, long_only: bool = True):
+        self.ma_window = ma_window
+        self.warmup = ma_window + 2
+        self.long_only = long_only
+
+    def target_weight(self, history: pd.DataFrame) -> float:
+        seg = history.tail(self.ma_window * 3 + 5)
+        c, v = seg["close"], seg["volume"]
+        obv = (np.sign(c.diff().fillna(0.0)) * v).cumsum()
+        return self._clamp(1.0 if obv.iloc[-1] > obv.tail(self.ma_window).mean() else 0.0)
+
+
+class VWMATrend(Strategy):
+    """Trend, VOLUME-weighted. A volume-weighted moving-average crossover: bars
+    with heavier volume count more toward the average, so the signal leans on
+    prices that actually traded size. Long when the fast VWMA is above the slow
+    VWMA. Like `ma_crossover`, but volume-aware."""
+    name = "vwma_trend"
+
+    def __init__(self, fast: int = 20, slow: int = 50, long_only: bool = True):
+        assert fast < slow, "fast window must be shorter than slow"
+        self.fast, self.slow = fast, slow
+        self.warmup = slow + 1
+        self.long_only = long_only
+
+    def _vwma(self, c, v, n) -> float:
+        cc, vv = c.tail(n), v.tail(n)
+        s = vv.sum()
+        return float((cc * vv).sum() / s) if s > 0 else float(cc.mean())
+
+    def target_weight(self, history: pd.DataFrame) -> float:
+        c, v = history["close"], history["volume"]
+        return self._clamp(1.0 if self._vwma(c, v, self.fast) > self._vwma(c, v, self.slow)
+                           else 0.0)
+
+
+class MoneyFlowIndex(Strategy):
+    """Reversion, VOLUME-weighted. The Money Flow Index is essentially a
+    volume-weighted RSI: it weights up/down days by their dollar volume to gauge
+    buying vs selling pressure. Buy when oversold, exit when overbought. Tends to
+    give cleaner reversion signals than plain RSI because thin moves count less."""
+    name = "mfi"
+
+    def __init__(self, period: int = 14, oversold: float = 20.0,
+                 overbought: float = 80.0, long_only: bool = True):
+        self.period, self.oversold, self.overbought = period, oversold, overbought
+        self.warmup = period + 2
+        self.long_only = long_only
+        self._pos = 0.0
+
+    def target_weight(self, history: pd.DataFrame) -> float:
+        seg = history.tail(self.period + 1)
+        tp = (seg["high"] + seg["low"] + seg["close"]) / 3.0
+        rmf = tp * seg["volume"]
+        change = tp.diff()
+        pos = rmf[change > 0].sum()
+        neg = rmf[change < 0].sum()
+        mfi = 100.0 if neg == 0 else 100.0 - 100.0 / (1.0 + pos / neg)
+        if mfi <= self.oversold:
+            self._pos = 1.0
+        elif mfi >= self.overbought:
+            self._pos = 0.0
+        return self._clamp(self._pos)
+
+
+class ROCAcceleration(Strategy):
+    """Momentum acceleration (2nd derivative). Not just 'is price rising' but 'is
+    the rise speeding UP': long only when trailing momentum is positive AND higher
+    than it was `accel_lag` bars ago. Aims to catch trends while they're
+    strengthening and step aside as they decelerate — earlier exits than plain
+    momentum, at the cost of more false alarms."""
+    name = "roc_accel"
+
+    def __init__(self, lookback: int = 63, accel_lag: int = 21, long_only: bool = True):
+        self.lookback, self.accel_lag = lookback, accel_lag
+        self.warmup = lookback + accel_lag + 1
+        self.long_only = long_only
+
+    def target_weight(self, history: pd.DataFrame) -> float:
+        c = history["close"]
+        roc_now = c.iloc[-1] / c.iloc[-(self.lookback + 1)] - 1.0
+        roc_past = (c.iloc[-(self.accel_lag + 1)]
+                    / c.iloc[-(self.lookback + self.accel_lag + 1)] - 1.0)
+        return self._clamp(1.0 if (roc_now > 0 and roc_now - roc_past > 0) else 0.0)
+
+
 # Single source of truth for strategy names -> classes. Every CLI tool reads
 # this, so adding a strategy here wires it into backtest, sweep, walk-forward,
 # plot, and live trading at once. (These are SINGLE-asset strategies; the
@@ -632,4 +892,14 @@ REGISTRY = {
     "volatility_breakout": VolatilityBreakout,
     "connors_rsi2": ConnorsRSI2,
     "adx_trend": ADXTrend,
+    "psar": ParabolicSAR,
+    "aroon": Aroon,
+    "dmi_cross": DMICross,
+    "trix": TRIX,
+    "kama_trend": KAMATrend,
+    "williams_r": WilliamsR,
+    "obv_trend": OBVTrend,
+    "vwma_trend": VWMATrend,
+    "mfi": MoneyFlowIndex,
+    "roc_accel": ROCAcceleration,
 }
